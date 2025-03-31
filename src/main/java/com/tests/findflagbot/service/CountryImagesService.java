@@ -1,46 +1,72 @@
 package com.tests.findflagbot.service;
 
 import com.tests.findflagbot.models.CountryImages;
-import com.tests.findflagbot.repository.CountryImagesRepository;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
+import java.io.*;
+import java.util.*;
 
 @Service
 public class CountryImagesService {
 
-    private final CountryImagesRepository countryImagesRepository;
+    private final List<CountryImages> countryImagesList;
 
-    public CountryImagesService(CountryImagesRepository countryImagesRepository) {
-        this.countryImagesRepository = countryImagesRepository;
+    public CountryImagesService() {
+        try {
+            this.countryImagesList = loadImages();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private List<CountryImages> loadImages() throws IOException {
+        List<CountryImages> imagesList = new ArrayList<>();
+        ResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+
+        Resource[] resources = resolver.getResources("classpath:/CountryImages/*.{png,jpg,jpeg,gif}");
+
+        for (Resource resource : resources) {
+            String filename = resource.getFilename();
+
+            assert filename != null;
+            String countryName = filename.replaceFirst("\\.[^.]+$", "");
+
+            File tempFile = File.createTempFile("flag-", "-" + filename);
+            try (InputStream is = resource.getInputStream();
+                 OutputStream os = new FileOutputStream(tempFile)) {
+                is.transferTo(os);
+            }
+
+            tempFile.deleteOnExit();
+
+            imagesList.add(new CountryImages(countryName, tempFile));
+        }
+
+        return imagesList;
     }
 
     public List<CountryImages> getAllCountryImages() {
-        return countryImagesRepository.findAll();
+        return new ArrayList<>(countryImagesList);
     }
-    public Optional<CountryImages> getCountryImagesById(long id) {
-        return countryImagesRepository.findById(id);
-    }
-    public Optional<CountryImages> getRandomCountryImages(Integer num) {
-        int randN = (int)(Math.random()*220)+1;
 
-        while(randN == num) {
-            randN = (int)(Math.random()*220)+1;
-        }
-
-        CountryImages t = getCountryImagesById(randN).get();
-
-        return Optional.of(t);
-    }
-    public Optional<CountryImages> getCountryImagesById(long id, CountryImages countryImages) {
-        List<CountryImages> countryImagesList = countryImagesRepository.findAll();
-
-        for(CountryImages countryImage: countryImagesList) {
-            if(countryImage.getId() == id){
-                return Optional.of(countryImage);
-            }
+    public CountryImages getCountryImagesById(int id) {
+        if (id >= 0 && id < countryImagesList.size()) {
+            return countryImagesList.get(id);
         }
         return null;
     }
+
+    public Optional<Integer> getRandomCountryImagesId(Set<Integer> excludedIds) {
+        int random = new Random().nextInt(countryImagesList.size());
+
+        while(excludedIds.contains(random)){
+            random = new Random().nextInt(countryImagesList.size());
+        }
+
+        return Optional.of(random);
+    }
+
 }

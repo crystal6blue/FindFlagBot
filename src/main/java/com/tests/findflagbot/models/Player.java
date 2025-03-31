@@ -11,9 +11,10 @@ import java.time.LocalDateTime;
 @Data
 @Entity
 public class Player {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     private Long playerTelegramId;
 
@@ -25,6 +26,7 @@ public class Player {
 
     public Player() {
     }
+
     public Player(Long playerTelegramId, String name, Integer points, LocalDateTime dateOfRegistration) {
         this.playerTelegramId = playerTelegramId;
         this.name = name;

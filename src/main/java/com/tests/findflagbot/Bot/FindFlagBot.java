@@ -19,10 +19,11 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.io.File;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -42,6 +43,7 @@ public class FindFlagBot extends TelegramLongPollingBot {
     public String getBotUsername() {
         return "findflagbot";
     }
+
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
@@ -123,11 +125,12 @@ public class FindFlagBot extends TelegramLongPollingBot {
     }
 
     public String getCallBackQuery(Message message) {
-        int randN = (int)(Math.random()*220)+1;
+        Set<Integer> set = new HashSet<>();
 
-        CountryImages countryImages = countryImagesService.getCountryImagesById(randN).get();
+        int randN = (int)(Math.random()*countryImagesService.getAllCountryImages().size());
+        set.add(randN);
 
-        CountryImages countryImagesRand;
+        CountryImages countryImages = countryImagesService.getCountryImagesById(randN);
 
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
 
@@ -135,23 +138,24 @@ public class FindFlagBot extends TelegramLongPollingBot {
 
         List<InlineKeyboardButton> keyboardButtons;
         List<List<InlineKeyboardButton>> list = new ArrayList<>();
-        String imagePath;
+        String imageName;
         for(int i = 1; i < 5; i++){
-            countryImagesRand = countryImagesService.getRandomCountryImages(randN).get();
-
             if(ran == i){
-                imagePath = countryImages.getName().replaceFirst(".png", "").replaceFirst("_", "");
+                imageName = countryImages.name().replaceFirst(".png", "").replaceFirst("_", "");
 
                 InlineKeyboardButton button1 = new InlineKeyboardButton();
-                button1.setText(imagePath);
+                button1.setText(imageName);
                 button1.setCallbackData(""+i);
                 keyboardButtons = new ArrayList<>();
                 keyboardButtons.add(button1);
             } else {
-                imagePath = countryImagesRand.getName().replaceFirst(".png", "").replaceFirst("_", "");
+                int elementId = countryImagesService.getRandomCountryImagesId(set).get();
+                set.add(elementId);
+                CountryImages element = countryImagesService.getCountryImagesById(elementId);
+                imageName = element.name();
 
                 InlineKeyboardButton button1 = new InlineKeyboardButton();
-                button1.setText(imagePath);
+                button1.setText(imageName);
                 button1.setCallbackData(""+i);
                 keyboardButtons = new ArrayList<>();
                 keyboardButtons.add(button1);
@@ -161,12 +165,11 @@ public class FindFlagBot extends TelegramLongPollingBot {
 
         keyboardMarkup.setKeyboard(list);
 
-
         try {
             execute(SendPhoto.builder()
                     .parseMode("MarkDown")
                     .chatId(message.getChatId())
-                    .photo(new InputFile(new File(countryImages.getImagePath())))
+                    .photo(new InputFile(countryImages.file()))
                     .replyMarkup(keyboardMarkup)
                     .build());
         }catch (TelegramApiException e) {

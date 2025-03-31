@@ -5,7 +5,6 @@ import com.tests.findflagbot.repository.PlayerRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -18,29 +17,20 @@ public class PlayerService {
         this.playerRepository = playerRepository;
     }
 
-    public List<Player> findAll() {
-        return playerRepository.findAll();
-    }
-
     public void save(Player player) {
         playerRepository.save(player);
     }
-    public void delete(Player player) {
-        playerRepository.delete(player);
-    }
 
     public Player findByChatId(Long chatId) {
-        List<Player> players = playerRepository.findAll();
-        for(Player player : players){
-            if(player.getPlayerTelegramId().equals(chatId)){
-                return player;
-            }
+        Player player = playerRepository.findPLayerByPlayerTelegramId(chatId);
+        if(player == null) {
+            throw new RuntimeException("Could not find player with chat id " + chatId);
         }
-        return null;
+        return player;
     }
 
-    public Optional<Player> addPointToPlayer(Integer id) {
-        Optional<Player> existingPlayerOptional = playerRepository.findById(id.longValue());
+    public Optional<Player> addPointToPlayer(Long id) {
+        Optional<Player> existingPlayerOptional = playerRepository.findById(id);
 
         if (existingPlayerOptional.isPresent()) {
             Player existingPlayer = existingPlayerOptional.get();
@@ -53,6 +43,4 @@ public class PlayerService {
         }
         return Optional.empty();
     }
-
-
 }
